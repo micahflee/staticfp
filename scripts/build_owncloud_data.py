@@ -106,11 +106,11 @@ def build_data():
     The data dict is structured like this:
 
     {
-        'owncloud/somefile.txt': {
+        'somefile.txt': {
             'sha256_hash1': ['version1', 'version2'],
             'sha256_hash2': ['version3']
         },
-        'owncloud/some_other_file.png': {
+        'some_other_file.png': {
             'sha256_hash3': ['version1']
         }
     }
@@ -148,6 +148,8 @@ def build_data():
                 # Fix the filename so it's not prefixed with the absolute path to extracted_dir
                 # e.g. 'owncloud/settings/l10n/th_TH.js' instead of '/home/user/code/staticfp/cache/owncloud-9.1.4/owncloud/settings/l10n/th_TH.js'
                 filename = filename[len(extracted_dir)+1:]
+                # For owncloud, remove the 'owncloud/' at the beginning
+                filename = filename[len('owncloud/'):]
 
                 # Add it to the dictionary
                 if filename not in data:

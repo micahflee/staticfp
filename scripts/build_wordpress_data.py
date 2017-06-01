@@ -77,24 +77,28 @@ def wordpress_version_from_filename(filename):
     return filename[len('wordpress-'):][0:-len('.tar.gz')]
 
 def main():
-    # Make a list of all owncloud versions
+    # Make a list of all wordpress versions
     versions = []
     for filename in ARCHIVE_FILENAMES:
         versions.append(wordpress_version_from_filename(filename))
     with open(os.path.join(common.DATA_DIR, 'wordpress_versions.json'), 'w') as outfile:
         json.dump(versions, outfile)
 
-    # Download all of the owncloud archives
+    # Download all of the wordpress archives
     print("[] Downloading wordpress archives")
     common.download_archives(ARCHIVE_FILENAMES, MIRROR)
 
-    # Extract all of the owncloud archives
+    # Extract all of the wordpress archives
     print("[] Extract all wordpress archives")
     common.extract_archives(ARCHIVE_FILENAMES, 'wordpress-{}', wordpress_version_from_filename)
 
-    # Build the owncloud data object, write to json
+    # Build the wordpress data object, write to json
+    def filename_mod_func(filename):
+        # Remove the 'wordpress/' at the beginning
+        return filename[len('wordpress/'):]
+
     print("[] Building the wordpress data object")
-    (data, freq) = common.build_data(ARCHIVE_FILENAMES, 'wordpress-{}', wordpress_version_from_filename)
+    (data, freq) = common.build_data(ARCHIVE_FILENAMES, 'wordpress-{}', wordpress_version_from_filename, filename_mod_func)
     with open(os.path.join(common.DATA_DIR, 'wordpress_data.json'), 'w') as outfile:
         json.dump(data, outfile)
     with open(os.path.join(common.DATA_DIR, 'wordpress_freq.json'), 'w') as outfile:

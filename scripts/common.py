@@ -4,7 +4,9 @@ import subprocess
 import shutil
 import hashlib
 
-from urllib.request import urlretrieve
+import urllib
+import urllib.request
+import urllib.error
 
 CACHE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'cache')
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data')
@@ -31,11 +33,13 @@ def download_archives(archive_filenames, mirror):
         else:
             print("GET {}".format(url))
             try:
-                urlretrieve(url, abs_filename, reporthook=reporthook)
+                urllib.request.urlretrieve(url, abs_filename, reporthook=reporthook)
             except KeyboardInterrupt:
                 os.remove(abs_filename)
                 print("")
                 sys.exit()
+            except urllib.error.HTTPError as e:
+                print("Error, skipping download... {}".format(e))
 
 def extract_archives(archive_filenames, extracted_dir_format, version_func):
     for filename in archive_filenames:

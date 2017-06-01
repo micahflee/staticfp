@@ -120,6 +120,7 @@ def build_data():
     frequently), and ends with the filenames that change the least frequently.
     """
     print("[] Building the owncloud data object")
+    sys.stdout.write("Parsing owncloud versions: ")
 
     # Start by building a dictionary version of the data this isn't sorted
     data = {}
@@ -129,7 +130,8 @@ def build_data():
         abs_archive_filename = os.path.join(CACHE_DIR, archive_filename)
         extracted_dir = os.path.join(CACHE_DIR, 'owncloud-{}'.format(version))
 
-        print("Parsing owncloud {} ...".format(version))
+        sys.stdout.write("{} ".format(version))
+        sys.stdout.flush()
 
         # Loop through all of the files in this archive
         for (dirpath, _, filenames) in os.walk(extracted_dir):
@@ -139,17 +141,24 @@ def build_data():
                     continue
 
                 # Get the hash
-                filename = os.path.join(dir_path, f)
+                filename = os.path.join(dirpath, f)
                 with open(filename, 'rb') as f:
                     sha256_hash = hashlib.sha256(f.read()).hexdigest()
+
+                # Fix the filename so it's not prefixed with the absolute path to extracted_dir
+                # e.g. 'owncloud/settings/l10n/th_TH.js' instead of '/home/user/code/staticfp/cache/owncloud-9.1.4/owncloud/settings/l10n/th_TH.js'
+                filename = filename[len(extracted_dir)+1:]
 
                 # Add it to the dictionary
                 if filename not in data:
                     data[filename] = {}
-                if sha256_hash not in d[filename]:
+                if sha256_hash not in data[filename]:
                     data[filename][sha256_hash] = []
-                if version not in d[filename][sha256_hash]:
+                if version not in data[filename][sha256_hash]:
                     data[filename][sha256_hash].append(version)
+
+    sys.stdout.write("\n")
+    sys.stdout.flush()
 
     # Now sort the data by the number of hashes each file has
     freq_tuple = [(len(val), key) for (key, val) in data.items()]

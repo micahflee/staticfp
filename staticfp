@@ -14,14 +14,20 @@ def hash_of_remote_file(url, filename, user_agent):
 
     full_url = '{}/{}'.format(url, filename)
 
-    sys.stdout.write("GET {} \t".format(full_url))
-    r = requests.get(full_url, headers=headers)
-    sys.stdout.write('{}\n'.format(r.status_code))
+    try:
+        sys.stdout.write("GET {} \t".format(full_url))
+        r = requests.get(full_url, headers=headers)
+        sys.stdout.write('{}\n'.format(r.status_code))
 
-    if r.status_code == 200:
-        return hashlib.sha256(r.content).hexdigest()
-    else:
-        return None
+        if r.status_code == 200:
+            return hashlib.sha256(r.content).hexdigest()
+        else:
+            return None
+
+    except Exception as e:
+        print()
+        print("{}".format(e))
+        sys.exit(1)
 
 def fingerprint_owncloud(url, user_agent):
     print("[] Fingerprinting version of owncloud at {}".format(url))

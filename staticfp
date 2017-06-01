@@ -7,16 +7,24 @@ import hashlib
 
 import requests
 
+# Disable SSL warnings
+# https://urllib3.readthedocs.io/en/latest/advanced-usage.html#ssl-warnings
+import urllib3
+urllib3.disable_warnings()
+
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
 
-def hash_of_remote_file(url, filename, user_agent):
+def hash_of_remote_file(url, filename, user_agent, verify_ssl):
     headers = {'user-agent': user_agent}
 
     full_url = '{}/{}'.format(url, filename)
 
     try:
         sys.stdout.write("GET {} \t".format(full_url))
-        r = requests.get(full_url, headers=headers)
+        if verify_ssl:
+            r = requests.get(full_url, headers=headers)
+        else:
+            r = requests.get(full_url, headers=headers, verify=False)
         sys.stdout.write('{}\n'.format(r.status_code))
 
         if r.status_code == 200:
@@ -29,7 +37,7 @@ def hash_of_remote_file(url, filename, user_agent):
         print("{}".format(e))
         sys.exit(1)
 
-def fingerprint_owncloud(url, user_agent):
+def fingerprint_owncloud(url, user_agent, verify_ssl):
     print("[] Fingerprinting version of owncloud at {}".format(url))
 
     # Load the data
@@ -43,7 +51,7 @@ def fingerprint_owncloud(url, user_agent):
     # Start with the most frequently modified files
     for filename in freq:
         # Get the hash of the remote file
-        h = hash_of_remote_file(url, filename, user_agent)
+        h = hash_of_remote_file(url, filename, user_agent, verify_ssl)
         if h == None:
             continue
 
@@ -70,6 +78,7 @@ def main():
     parser.add_argument('webapp', metavar='webapp', type=str, nargs=1, help="web app software being targeted (e.g. 'owncloud')")
     parser.add_argument('url', metavar='url', type=str, nargs=1, help='URL of the web app')
     parser.add_argument('--user-agent', metavar='user_agent', default="Mozilla/5.0 (Windows NT 6.1; rv:45.0) Gecko/20100101 Firefox/45.0", help='user agent string (default is Firefox in Windows)')
+    parser.add_argument('--no-verify-ssl', const='no_verify_ssl', action='store_const', default=False, help="don't verify SSL certificate")
     args = parser.parse_args()
 
     # Validate args
@@ -86,9 +95,12 @@ def main():
     # Remove the trailing slash from the URL, if it's there
     url = url.rstrip('/')
 
+    # Should we verify SSL certs?
+    verify_ssl = (args.no_verify_ssl == False)
+
     # Start
     if webapp == 'owncloud':
-        fingerprint_owncloud(url, args.user_agent)
+        fingerprint_owncloud(url, args.user_agent, verify_ssl)
 
 if __name__ == '__main__':
     main()

@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 import sys
 import os
+import shutil
 import subprocess
+import hashlib
+
 from urllib.request import urlretrieve
 
 CACHE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'cache')
@@ -77,23 +80,31 @@ def extract_archives():
         if os.path.exists(extracted_dir):
             print("Archive {} has already been extracted, skipping".format(filename))
         else:
-            print("Extracting {}".format(filename))
-            subprocess.call(['tar', '-xf', abs_filename, '--directory', extracted_dir])
+            os.mkdir(extracted_dir)
+            try:
+                print("Extracting {}".format(filename))
+                subprocess.call(['tar', '-xf', abs_filename, '--directory', extracted_dir])
+            except KeyboardInterrupt:
+                shutil.rmtree(extracted_dir)
+                print("")
+                sys.exit()
 
 def build_data():
     """
-    This function returns a list containing all of the owncloud data that's
-    structured like this:
+    This function returns a tuple with a data dictionary containing all of the
+    owncloud data, along with a list of filenames sorted by the most hashes first.
 
-    [
-        'owncloud/somefile': {
-            'hash1': ['version1', 'version2'],
-            'hash2': ['version3']
+    The data dict is structured like this:
+
+    {
+        'owncloud/somefile.txt': {
+            'sha256_hash1': ['version1', 'version2'],
+            'sha256_hash2': ['version3']
         },
-        'owncloud/some_other_file': {
-            'hash3': ['version1']
+        'owncloud/some_other_file.png': {
+            'sha256_hash3': ['version1']
         }
-    ]
+    }
 
     The list is sorted so that it starts with the filenames that contain the most
     unique hashes for all of the owncloud versions (basically, that change the most
@@ -101,10 +112,39 @@ def build_data():
     """
 
     # Start by building a dictionary version of the data this isn't sorted
-    d = {}
-    
-    data = []
-    return data
+    data = {}
+
+    for archive_filename in ARCHIVE_FILENAMES:
+        abs_archive_filename = os.path.join(CACHE_DIR, archive_filename)
+        extracted_dir = abs_archive_filename.rstrip('.tar.bz2')
+        version = archive_filename.lstrip('owncloud-').rstrip('.tar.bz2')
+
+        # Loop through all of the files in this archive
+        for (dirpath, _, filenames) in os.walk(extracted_dir):
+            for f in filenames:
+                # Skip php files
+                if f.endswith('.php'):
+                    continue
+
+                # Get the hash
+                filename = os.path.join(dir_path, f)
+                with open(filename, 'rb') as f:
+                    sha256_hash = hashlib.sha256(f.read()).hexdigest()
+
+                # Add it to the dictionary
+                if filename not in data:
+                    data[filename] = {}
+                if sha256_hash not in d[filename]:
+                    data[filename][sha256_hash] = []
+                if version not in d[filename][sha256_hash]:
+                    data[filename][sha256_hash].append(version)
+
+    # Now sort the data by the number of hashes each file has
+    freq_tuple = [(len(val), key) for (key, val) in data.items()]
+    freq_tuple.sort(reverse=True)
+    freq = [key for (count, key) in freq_tuple]
+
+    return (data, freq)
 
 def main():
     # Download all of the owncloud archives
@@ -114,7 +154,7 @@ def main():
     extract_archives()
 
     # Build the owncloud data object
-    data = build_data()
+    #(data, freq) = build_data()
 
 if __name__ == '__main__':
     main()

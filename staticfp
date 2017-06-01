@@ -1,0 +1,88 @@
+#!/usr/bin/env python3
+import sys
+import os
+import argparse
+import json
+import hashlib
+
+import requests
+
+DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
+
+def hash_of_remote_file(url, filename, user_agent):
+    headers = {'user-agent': user_agent}
+
+    full_url = '{}/{}'.format(url, filename)
+
+    sys.stdout.write("GET {} \t".format(full_url))
+    r = requests.get(full_url, headers=headers)
+    sys.stdout.write('{}\n'.format(r.status_code))
+
+    if r.status_code == 200:
+        return hashlib.sha256(r.content).hexdigest()
+    else:
+        return None
+
+def fingerprint_owncloud(url, user_agent):
+    print("[] Fingerprinting version of owncloud at {}".format(url))
+
+    # Load the data
+    versions = json.load(open(os.path.join(DATA_DIR, 'owncloud_versions.json'), 'r'))
+    data = json.load(open(os.path.join(DATA_DIR, 'owncloud_data.json'), 'r'))
+    freq = json.load(open(os.path.join(DATA_DIR, 'owncloud_freq.json'), 'r'))
+
+    # Keep track of the list of possible versions
+    possible_versions = versions
+
+    # Start with the most frequently modified files
+    for filename in freq:
+        # Get the hash of the remote file
+        h = hash_of_remote_file(url, filename, user_agent)
+        if h == None:
+            continue
+
+        # Is the hash in the data?
+        if h in data[filename]:
+            # Rule out versions
+            versions_to_delete = []
+            for v in possible_versions:
+                if v not in data[filename][h]:
+                    versions_to_delete.append(v)
+            for v in versions_to_delete:
+                possible_versions.remove(v)
+            print("Possible versions: {}".format(possible_versions))
+
+            if len(possible_versions) == 1:
+                sys.exit(0)
+
+        else:
+            print('SHA256 hash {} not in data, skipping')
+
+def main():
+    # Parse arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument('webapp', metavar='webapp', type=str, nargs=1, help="web app software being targeted (e.g. 'owncloud')")
+    parser.add_argument('url', metavar='url', type=str, nargs=1, help='URL of the web app')
+    parser.add_argument('--user-agent', metavar='user_agent', default="Mozilla/5.0 (Windows NT 6.1; rv:45.0) Gecko/20100101 Firefox/45.0", help='user agent string (default is Firefox in Windows)')
+    args = parser.parse_args()
+
+    # Validate args
+    webapp = args.webapp[0]
+    if webapp != 'owncloud':
+        print("owncloud is the only webapp that's supported")
+        sys.exit(1)
+
+    url = args.url[0]
+    if not url.startswith('http://') and not url.startswith('https://'):
+        print('url must start with http:// or https://')
+        sys.exit(1)
+
+    # Remove the trailing slash from the URL, if it's there
+    url = url.rstrip('/')
+
+    # Start
+    if webapp == 'owncloud':
+        fingerprint_owncloud(url, args.user_agent)
+
+if __name__ == '__main__':
+    main()

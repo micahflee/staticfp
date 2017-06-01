@@ -28,7 +28,9 @@ def hash_of_remote_file(url, filename, user_agent, verify_ssl):
         sys.stdout.write('{}\n'.format(r.status_code))
 
         if r.status_code == 200:
-            return hashlib.sha256(r.content).hexdigest()
+            h = hashlib.sha256(r.content).hexdigest()
+            print("  SHA256 of {}: {}".format(filename, h))
+            return h
         else:
             return None
 
@@ -64,13 +66,13 @@ def fingerprint_owncloud(url, user_agent, verify_ssl):
                     versions_to_delete.append(v)
             for v in versions_to_delete:
                 possible_versions.remove(v)
-            print("Possible versions: {}".format(possible_versions))
+            print("  Possible versions: {}".format(possible_versions))
 
             if len(possible_versions) == 1:
                 sys.exit(0)
 
         else:
-            print('SHA256 hash {} not in data, skipping')
+            print('  Hash not in data, skipping')
 
 def main():
     # Parse arguments

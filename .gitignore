@@ -3,3 +3,7 @@ cache
 
 # virtualenv
 env
+
+# python
+*.py[cod]
+

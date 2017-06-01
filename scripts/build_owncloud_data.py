@@ -4,10 +4,13 @@ import os
 import shutil
 import subprocess
 import hashlib
+import json
 
 from urllib.request import urlretrieve
 
 CACHE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'cache')
+DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data')
+
 MIRROR = 'https://ftp.icm.edu.pl/packages/owncloud'
 ARCHIVE_FILENAMES = [
     'owncloud-4.0.13.tar.bz2', 'owncloud-4.0.14.tar.bz2', 'owncloud-4.0.15.tar.bz2', 'owncloud-4.0.16.tar.bz2',
@@ -42,6 +45,12 @@ ARCHIVE_FILENAMES = [
     'owncloud-10.0.0beta.tar.bz2', 'owncloud-10.0.0RC2.tar.bz2', 'owncloud-10.0.0.tar.bz2', 'owncloud-10.0.1.tar.bz2'
 ]
 
+def version_from_filename(filename):
+    """
+    If filename is 'owncloud-9.1.4RC2.tar.bz2', this returns '9.1.4RC2'
+    """
+    return filename[len('owncloud-'):][0:-len('.tar.bz2')]
+
 def reporthook(blocknum, blocksize, totalsize):
     readsofar = blocknum * blocksize
     if totalsize > 0:
@@ -75,14 +84,14 @@ def extract_archives():
     print("[] Extract all owncloud archives")
     for filename in ARCHIVE_FILENAMES:
         abs_filename = os.path.join(CACHE_DIR, filename)
-        extracted_dir = abs_filename.rstrip('.tar.bz2')
+        extracted_dir = os.path.join(CACHE_DIR, 'owncloud-{}'.format(version_from_filename(filename)))
 
         if os.path.exists(extracted_dir):
-            print("Archive {} has already been extracted, skipping".format(filename))
+            print("Archive {} has already been extracted into {}, skipping".format(filename, extracted_dir))
         else:
             os.mkdir(extracted_dir)
             try:
-                print("Extracting {}".format(filename))
+                print("Extracting {} into {}".format(filename, extracted_dir))
                 subprocess.call(['tar', '-xf', abs_filename, '--directory', extracted_dir])
             except KeyboardInterrupt:
                 shutil.rmtree(extracted_dir)
@@ -110,14 +119,17 @@ def build_data():
     unique hashes for all of the owncloud versions (basically, that change the most
     frequently), and ends with the filenames that change the least frequently.
     """
+    print("[] Building the owncloud data object")
 
     # Start by building a dictionary version of the data this isn't sorted
     data = {}
 
     for archive_filename in ARCHIVE_FILENAMES:
+        version = version_from_filename(archive_filename)
         abs_archive_filename = os.path.join(CACHE_DIR, archive_filename)
-        extracted_dir = abs_archive_filename.rstrip('.tar.bz2')
-        version = archive_filename.lstrip('owncloud-').rstrip('.tar.bz2')
+        extracted_dir = os.path.join(CACHE_DIR, 'owncloud-{}'.format(version))
+
+        print("Parsing owncloud {} ...".format(version))
 
         # Loop through all of the files in this archive
         for (dirpath, _, filenames) in os.walk(extracted_dir):
@@ -153,8 +165,12 @@ def main():
     # Extract all of the owncloud archives
     extract_archives()
 
-    # Build the owncloud data object
-    #(data, freq) = build_data()
+    # Build the owncloud data object, write to json
+    (data, freq) = build_data()
+    with open(os.path.join(DATA_DIR, 'owncloud_data.json'), 'w') as outfile:
+        json.dump(data, outfile)
+    with open(os.path.join(DATA_DIR, 'owncloud_freq.json'), 'w') as outfile:
+        json.dump(freq, outfile)
 
 if __name__ == '__main__':
     main()

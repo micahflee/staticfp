@@ -39,13 +39,13 @@ def hash_of_remote_file(url, filename, user_agent, verify_ssl):
         print("{}".format(e))
         sys.exit(1)
 
-def fingerprint_owncloud(url, user_agent, verify_ssl):
+def fingerprint(webapp, url, user_agent, verify_ssl):
     print("[] Fingerprinting version of owncloud at {}".format(url))
 
     # Load the data
-    versions = json.load(open(os.path.join(DATA_DIR, 'owncloud_versions.json'), 'r'))
-    data = json.load(open(os.path.join(DATA_DIR, 'owncloud_data.json'), 'r'))
-    freq = json.load(open(os.path.join(DATA_DIR, 'owncloud_freq.json'), 'r'))
+    versions = json.load(open(os.path.join(DATA_DIR, '{}_versions.json'.format(webapp)), 'r'))
+    data = json.load(open(os.path.join(DATA_DIR, '{}_data.json'.format(webapp)), 'r'))
+    freq = json.load(open(os.path.join(DATA_DIR, '{}_freq.json'.format(webapp)), 'r'))
 
     # Keep track of the list of possible versions
     possible_versions = versions
@@ -85,8 +85,9 @@ def main():
 
     # Validate args
     webapp = args.webapp[0]
-    if webapp != 'owncloud':
-        print("owncloud is the only webapp that's supported")
+    valid_webapps = ['owncloud', 'wordpress']
+    if webapp not in valid_webapps:
+        print("you must use one of the supported webapps: {}".format(valid_webapps))
         sys.exit(1)
 
     url = args.url[0]
@@ -101,8 +102,7 @@ def main():
     verify_ssl = (args.no_verify_ssl == False)
 
     # Start
-    if webapp == 'owncloud':
-        fingerprint_owncloud(url, args.user_agent, verify_ssl)
+    fingerprint(webapp, url, args.user_agent, verify_ssl)
 
 if __name__ == '__main__':
     main()

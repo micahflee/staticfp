@@ -168,6 +168,13 @@ def build_data():
     return (data, freq)
 
 def main():
+    # Make a list of all owncloud versions
+    versions = []
+    for filename in ARCHIVE_FILENAMES:
+        versions.append(version_from_filename(filename))
+    with open(os.path.join(DATA_DIR, 'owncloud_versions.json'), 'w') as outfile:
+        json.dump(versions, outfile)
+
     # Download all of the owncloud archives
     download_archives()
 

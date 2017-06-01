@@ -51,7 +51,7 @@ def reporthook(blocknum, blocksize, totalsize):
     else: # total size is unknown
         sys.stderr.write("read %d\n" % (readsofar,))
 
-def download_files():
+def download_archives():
     print("[] Downloading owncloud archives")
     for filename in ARCHIVE_FILENAMES:
         url = '{}/{}'.format(MIRROR, filename)
@@ -61,18 +61,60 @@ def download_files():
             print("Archive {} already exists, skipping".format(filename))
         else:
             print("GET {}".format(url))
-            urlretrieve(url, abs_filename, reporthook=reporthook)
+            try:
+                urlretrieve(url, abs_filename, reporthook=reporthook)
+            except KeyboardInterrupt:
+                os.remove(abs_filename)
+                print("")
+                sys.exit()
+
+def extract_archives():
+    print("[] Extract all owncloud archives")
+    for filename in ARCHIVE_FILENAMES:
+        abs_filename = os.path.join(CACHE_DIR, filename)
+        extracted_dir = abs_filename.rstrip('.tar.bz2')
+
+        if os.path.exists(extracted_dir):
+            print("Archive {} has already been extracted, skipping".format(filename))
+        else:
+            print("Extracting {}".format(filename))
+            subprocess.call(['tar', '-xf', abs_filename, '--directory', extracted_dir])
+
+def build_data():
+    """
+    This function returns a list containing all of the owncloud data that's
+    structured like this:
+
+    [
+        'owncloud/somefile': {
+            'hash1': ['version1', 'version2'],
+            'hash2': ['version3']
+        },
+        'owncloud/some_other_file': {
+            'hash3': ['version1']
+        }
+    ]
+
+    The list is sorted so that it starts with the filenames that contain the most
+    unique hashes for all of the owncloud versions (basically, that change the most
+    frequently), and ends with the filenames that change the least frequently.
+    """
+
+    # Start by building a dictionary version of the data this isn't sorted
+    d = {}
+    
+    data = []
+    return data
 
 def main():
-    try:
-        # Download all of the owncloud archives
-        download_files()
+    # Download all of the owncloud archives
+    download_archives()
 
-        # Extract all of the owncloud archives
+    # Extract all of the owncloud archives
+    extract_archives()
 
-    except KeyboardInterrupt:
-        print()
-        pass
+    # Build the owncloud data object
+    data = build_data()
 
 if __name__ == '__main__':
     main()

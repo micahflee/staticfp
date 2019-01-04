@@ -5,7 +5,7 @@ Fingerprint the exact version of web apps based on their static resources. (Star
 Set up the virtualenv:
 
 ```sh
-$ virtualenv-3 env/
+$ python3 -m venv env/
 $ . env/bin/activate
 (env) $ pip install -r requirements.txt
 ```
